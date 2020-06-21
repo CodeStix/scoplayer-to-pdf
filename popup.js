@@ -5,18 +5,17 @@ window.onload = function () {
     document.querySelector("#convert-button").addEventListener("click", doConvertPDF);
     document.querySelector("#advanced-settings-toggle").addEventListener("click", () => {
         var p = document.querySelector("#advanced-settings-collapse");
-        if (!p.getAttribute("collapsed")) p.setAttribute("collapsed", true);
+        if (!p.hasAttribute("collapsed")) p.setAttribute("collapsed", true);
         else p.removeAttribute("collapsed");
     });
 
-    chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    /*chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         if (!("cmsPdf" in message)) return;
         message = message.cmsPdf;
 
         switch (message.type) {
             case "PDFDone":
                 if (message.error) setWarning(`An unexpected error occured: ${message.error}`);
-                updateBusy(false);
                 sendResponse({ cmsPdf: true });
                 return true;
             case "progress":
@@ -27,7 +26,7 @@ window.onload = function () {
 
         sendResponse({ cmsPdf: null });
         return true;
-    });
+    });*/
 
     sendMessage({ type: "info" }).then((res) => {
         const content = document.querySelector("#content");
@@ -35,7 +34,6 @@ window.onload = function () {
             setWarning(null);
             content.style.display = "block";
 
-            document.querySelector("#page-count-label").innerText = "Page count: " + res.pageCount;
             var minPage = document.querySelector("#min-page-input");
             minPage.max = res.pageCount;
             minPage.value = 1;
@@ -43,13 +41,23 @@ window.onload = function () {
             maxPage.max = res.pageCount;
             maxPage.value = res.pageCount;
 
-            updateBusy(res.busy);
+            setProgress(res.globalProgressInfo);
         } else {
             setWarning("This website is not supported.");
             content.style.display = "none";
         }
     });
+
+    setTimeout(pollProgress, 200);
 };
+
+function pollProgress() {
+    sendMessage({ type: "progress" }).then((res) => {
+        setProgress(res);
+        setTimeout(pollProgress, 200);
+    });
+
+}
 
 function setWarning(message) {
     var warning = document.querySelector("#warning-unsupported");
@@ -92,14 +100,23 @@ async function doShowHiddenLayer(ev) {
     ev.target.innerText = !hiddenLayerShown ? "Show hidden layer" : "Hide layer";
 }
 
-function updateBusy(busy) {
+function setProgress(globalProgressInfo) {
+
+    document.querySelector("#progress-section").style.display = globalProgressInfo.busy ? "block" : "none";
     document.querySelectorAll(".control").forEach((el) => {
-        el.disabled = busy;
+        el.disabled = globalProgressInfo.busy;
     });
 
+    if (!globalProgressInfo.busy) 
+        return;
+
+    var statusText = document.querySelector("#convert-status");
+    statusText.style.display = globalProgressInfo.busy ? "block" : "none";
+    statusText.innerText = `${globalProgressInfo.status} (${globalProgressInfo.pagesDone} pages)`;
+
     var progress = document.querySelector("#convert-progress");
-    progress.value = 50;
-    progress.style.display = busy ? "block" : "none";
+    progress.style.display = globalProgressInfo.busy ? "block" : "none";
+    progress.value = globalProgressInfo.progress * 100;
 }
 
 async function doConvertPDF() {
@@ -108,6 +125,10 @@ async function doConvertPDF() {
     var recognizeText = document.querySelector("#recognize-text-check").checked;
     var includeHidden = document.querySelector("#hidden-layer-check").checked;
 
+    if (startPage >= endPage) {
+        setWarning("The start page number must be lower than the end page number!");
+        return;
+    }
+
     await sendMessage({ type: "createPDF", recognizeText, startPage, endPage, includeHidden });
-    updateBusy(true);
 }

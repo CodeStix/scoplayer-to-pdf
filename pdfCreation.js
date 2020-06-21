@@ -51,9 +51,7 @@ async function urlsToBase64Downscale(urls, downscaleFactor = 1) {
 }
 
 async function createRecognitionScheduler() {
-    var scheduler = Tesseract.createScheduler({
-        logger: (m) => console.log(m),
-    });
+    var scheduler = Tesseract.createScheduler();
     var workerCreationJobs = [];
     for (let i = 0; i < 12; i++) {
         workerCreationJobs.push(
@@ -73,16 +71,28 @@ async function createRecognitionScheduler() {
     return scheduler;
 }
 
+var globalProgressInfo = {
+    progress: 0.0,
+    status: "",
+    pagesDone: 0,
+    busy: false
+};
+
 var jobs = [];
 var recogScheduler;
 async function createPDFWithTextRecognition(startPage, endPage, includeHidden = true) {
     console.log("Creating Tesseract workers/scheduler...");
+    globalProgressInfo = {
+        progress: 0.0,
+        status: "Enabling Tesseract...",
+        pagesDone: 0,
+        busy: true
+    };
 
     if (!recogScheduler) recogScheduler = await createRecognitionScheduler();
 
     console.log("Starting recognition...");
-
-    var pagesDone = 0;
+    globalProgressInfo.status = "Recognizing..."
 
     for (let p = startPage; p <= endPage; p += 2) {
         selectPage(p);
@@ -96,7 +106,8 @@ async function createPDFWithTextRecognition(startPage, endPage, includeHidden = 
                 recogScheduler
                     .addJob("recognize", leftBase64)
                     .then((recog) => {
-                        console.log("Did page", p, ++pagesDone, "done", pagesDone / (endPage - startPage));
+                        globalProgressInfo.progress = ++globalProgressInfo.pagesDone / (endPage - startPage);
+                        //console.log("Did left page", p, globalProgressInfo.pagesDone, "done", globalProgressInfo.progress);
                         return { base64: leftBase64, recog };
                     })
                     .catch((err) => {
@@ -110,7 +121,8 @@ async function createPDFWithTextRecognition(startPage, endPage, includeHidden = 
                 recogScheduler
                     .addJob("recognize", rightBase64)
                     .then((recog) => {
-                        console.log("Did page", p + 1, ++pagesDone, "done", pagesDone / (endPage - startPage));
+                        globalProgressInfo.progress = ++globalProgressInfo.pagesDone / (endPage - startPage);
+                        //console.log("Did right page", p, globalProgressInfo.pagesDone, "done", globalProgressInfo.progress);
                         return { base64: rightBase64, recog };
                     })
                     .catch((err) => {
@@ -122,13 +134,35 @@ async function createPDFWithTextRecognition(startPage, endPage, includeHidden = 
 
     const results = await Promise.all(jobs);
 
-    console.log("Creating pdf...");
+    const doc = await createPDFFromRecognitionJob(results);
+    await savePdf(doc);
 
-    await createPDFFromRecognitionJob(results);
+    globalProgressInfo = {
+        busy: false,
+        progress: 1,
+        status: "Ready",
+        pagesDone: 0
+    }
+}
+
+async function savePdf(doc) {
+    console.log("Saving...");
+    globalProgressInfo.status = "Saving...";
+
+    await addPDFWaterMark(doc);
+    doc.save(document.title + ".pdf");
 }
 
 var doc;
 async function createPDFFromRecognitionJob(results) {
+    console.log("Creating pdf...");
+    globalProgressInfo = {
+        pagesDone: 0,
+        status: "Generating PDF...",
+        progress: 0.0,
+        busy: true
+    }
+
     doc = new jsPDF("p", "pt", "a4", true);
     doc.setTextColor("#000000");
     doc.setFont("courier");
@@ -154,13 +188,13 @@ async function createPDFFromRecognitionJob(results) {
         } catch (ex) {
             console.warn("Could not render page", j + 1, ex);
         }
-
+        
         doc.addPage();
+        globalProgressInfo.pagesDone++;
+        globalProgressInfo.progress = (j + 1) / results.length;
     }
 
-    console.log("Done, saving...");
-    await addPDFWaterMark(doc);
-    doc.save(document.title + ".pdf");
+    return doc;
 }
 
 async function addPDFWaterMark(doc) {
@@ -172,6 +206,14 @@ async function addPDFWaterMark(doc) {
 }
 
 async function createNormalPDF(startPage, endPage, includeHidden = true) {
+    console.log("Creating pdf...");
+    globalProgressInfo = {
+        pagesDone: 0,
+        status: "Generating PDF...",
+        progress: 0.0,
+        busy: true
+    }
+
     doc = new jsPDF("p", "pt", "a4", true);
     var pw = doc.internal.pageSize.getWidth(),
         ph = doc.internal.pageSize.getHeight();
@@ -200,11 +242,19 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
                 console.warn("Could not render (right) page", p, ex);
             }
         }
+
+        globalProgressInfo.pagesDone += 2;
+        globalProgressInfo.progress = (p - startPage + 1) / (endPage - startPage);
     }
 
-    console.log("Done, saving...");
-    await addPDFWaterMark(doc);
-    doc.save(document.title + ".pdf");
+    await savePdf(doc);
+
+    globalProgressInfo = {
+        busy: false,
+        progress: 1,
+        status: "Ready",
+        pagesDone: 0
+    }
 }
 
 function sendMessage(message) {
@@ -266,7 +316,6 @@ function setHiddenLayer(shown) {
 
 /* Init */
 
-var busy = false;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!("cmsPdf" in message)) return;
     message = message.cmsPdf;
@@ -278,7 +327,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     cmsPdf: {
                         supported: true,
                         pageCount: getPageCount(),
-                        busy,
+                        globalProgressInfo,
                     },
                 });
             } else {
@@ -292,18 +341,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case "setHiddenLayer":
             sendResponse({ cmsPdf: setHiddenLayer(message.value) });
             return true;
+        case "progress":
+            sendResponse({ cmsPdf: globalProgressInfo });
+            return true;
         case "createPDF":
             var func = message.recognizeText ? createPDFWithTextRecognition : createNormalPDF;
-            busy = true;
-            func(message.startPage, message.endPage, message.includeHidden)
-                .then(() => {
-                    busy = false;
-                    sendMessage({ type: "PDFDone" });
-                })
-                .catch((error) => {
-                    busy = false;
-                    sendMessage({ type: "PDFDone", error });
-                });
+            func(message.startPage, message.endPage, message.includeHidden);
             sendResponse({ cmsPdf: true });
             return true;
     }
