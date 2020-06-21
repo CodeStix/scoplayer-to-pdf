@@ -202,7 +202,7 @@ async function addPDFWaterMark(doc) {
     doc.setFont("courier");
     var base64 = await urlToBase64(chrome.extension.getURL("images/icon256.png"));
     doc.addImage(base64, "PNG", 50, 50, 80, 80, undefined, "FAST");
-    doc.text(150, 50, "Created with CmsPdf chrome extension.\nBy Stijn Rogiest");
+    doc.text(150, 50, "Created with SCOPlayer To PDF chrome extension.\nBy Stijn Rogiest");
 }
 
 async function createNormalPDF(startPage, endPage, includeHidden = true) {
@@ -257,7 +257,7 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
     }
 }
 
-/* These should be altered when a new cms pdf viewer is registered */
+/* These should be altered when a new non-standard PDF viewer is registered */
 
 function getDocument() {
     return document.getElementById("viewFrame")?.contentWindow.document;
@@ -304,14 +304,14 @@ function setHiddenLayer(shown) {
 /* Init */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!("cmsPdf" in message)) return;
-    message = message.cmsPdf;
+    if (!("scoPlayer" in message)) return;
+    message = message.scoPlayer;
 
     switch (message.type) {
         case "info":
             if (isSupported()) {
                 sendResponse({
-                    cmsPdf: {
+                    scoPlayer: {
                         supported: true,
                         pageCount: getPageCount(),
                         globalProgressInfo,
@@ -319,25 +319,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
             } else {
                 sendResponse({
-                    cmsPdf: {
+                    scoPlayer: {
                         supported: false,
                     },
                 });
             }
             return true;
         case "setHiddenLayer":
-            sendResponse({ cmsPdf: setHiddenLayer(message.value) });
+            sendResponse({ scoPlayer: setHiddenLayer(message.value) });
             return true;
         case "progress":
-            sendResponse({ cmsPdf: globalProgressInfo });
+            sendResponse({ scoPlayer: globalProgressInfo });
             return true;
         case "createPDF":
             var func = message.recognizeText ? createPDFWithTextRecognition : createNormalPDF;
             func(message.startPage, message.endPage, message.includeHidden);
-            sendResponse({ cmsPdf: true });
+            sendResponse({ scoPlayer: true });
             return true;
     }
 
-    sendResponse({ cmsPdf: null });
+    sendResponse({ scoPlayer: null });
     return true;
 });

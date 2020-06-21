@@ -50,25 +50,25 @@ function sendMessage(message) {
     return new Promise((resolve, reject) => {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             var tab = tabs[0].id;
-            chrome.tabs.sendMessage(tab, { cmsPdf: message }, (res) => {
+            chrome.tabs.sendMessage(tab, { scoPlayer: message }, (res) => {
                 if (chrome.runtime.lastError || !res) {
                     // The message was not delivered, inject the scripts that will receive the message
                     chrome.tabs.executeScript(tab, { file: "tesseract.min.js" }, () => {
                         chrome.tabs.executeScript(tab, { file: "jspdf.min.js" }, () => {
                             chrome.tabs.executeScript(tab, { file: "pdfCreation.js" }, () => {
-                                chrome.tabs.sendMessage(tab, { cmsPdf: message }, (res) => {
+                                chrome.tabs.sendMessage(tab, { scoPlayer: message }, (res) => {
                                     if (chrome.runtime.lastError || !res) {
                                         console.warn("No answer after injecting, this should not happen.");
                                         reject();
                                     } else {
-                                        resolve(res.cmsPdf);
+                                        resolve(res.scoPlayer);
                                     }
                                 });
                             });
                         });
                     });
                 } else {
-                    resolve(res.cmsPdf);
+                    resolve(res.scoPlayer);
                 }
             });
         });

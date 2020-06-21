@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
-    "name": "CmsPdf",
-    "description": "Generate pdf files from non-standard (cms) pdf viewers, also able to show hidden text from them.",
+    "name": "SCOPlayer To PDF",
+    "description": "Generate PDF files from non-standard PDF viewers, also able to show hidden layers from them.",
     "version": "0.0.1",
     "icons": {
         "32": "images/icon32.png",
@@ -11,7 +11,7 @@
     },
     "permissions": ["activeTab", "tabs"],
     "browser_action": {
-        "default_title": "CmsPdf",
+        "default_title": "SCOPlayer To PDF",
         "default_icon": "images/icon64.png",
         "default_popup": "popup.html"
     },
