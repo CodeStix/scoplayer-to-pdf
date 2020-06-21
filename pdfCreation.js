@@ -257,19 +257,6 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
     }
 }
 
-function sendMessage(message) {
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(null, { cmsPdf: message }, (res) => {
-            if (res && res.cmsPdf) resolve(res);
-            else reject();
-        });
-    });
-}
-
-function reportProgress(progress) {
-    sendMessage({ type: "progress", progress });
-}
-
 /* These should be altered when a new cms pdf viewer is registered */
 
 function getDocument() {

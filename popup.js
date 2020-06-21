@@ -9,25 +9,6 @@ window.onload = function () {
         else p.removeAttribute("collapsed");
     });
 
-    /*chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-        if (!("cmsPdf" in message)) return;
-        message = message.cmsPdf;
-
-        switch (message.type) {
-            case "PDFDone":
-                if (message.error) setWarning(`An unexpected error occured: ${message.error}`);
-                sendResponse({ cmsPdf: true });
-                return true;
-            case "progress":
-                document.querySelector("#convert-progress").value = message.progress * 100;
-                sendResponse({ cmsPdf: true });
-                return true;
-        }
-
-        sendResponse({ cmsPdf: null });
-        return true;
-    });*/
-
     sendMessage({ type: "info" }).then((res) => {
         const content = document.querySelector("#content");
         if (res.supported) {
@@ -96,7 +77,12 @@ function sendMessage(message) {
 
 async function doShowHiddenLayer(ev) {
     hiddenLayerShown = !hiddenLayerShown;
-    await sendMessage({ type: "setHiddenLayer", value: hiddenLayerShown });
+    const res = await sendMessage({ type: "setHiddenLayer", value: hiddenLayerShown });
+    if (!res)
+    {
+        hiddenLayerShown = false;
+        setWarning("This page does not have a hidden layer.");
+    }
     ev.target.innerText = !hiddenLayerShown ? "Show hidden layer" : "Hide layer";
 }
 
