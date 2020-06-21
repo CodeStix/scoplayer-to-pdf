@@ -1,4 +1,5 @@
 <img style="float: left;" src="https://github.com/CodeStix/scoplayer-to-pdf/blob/master/images/icon64.png">
+
 # scoplayer-to-pdf
 This chrome extension generated PDF files from non-standard PDF viewers (mostly used by schools), 
 these non-standard viewers don't allow downloading the whole PDF that is being viewed. This tool solves that problem.
