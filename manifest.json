@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "SCOPlayer To PDF",
     "description": "Generate PDF files from non-standard PDF viewers, also able to show hidden layers from them.",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "icons": {
         "32": "images/icon32.png",
         "64": "images/icon64.png",
