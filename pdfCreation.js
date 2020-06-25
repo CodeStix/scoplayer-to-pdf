@@ -53,17 +53,27 @@ async function urlsToBase64Downscale(urls, downscaleFactor = 1) {
 async function createRecognitionScheduler() {
     var scheduler = Tesseract.createScheduler();
     var workerCreationJobs = [];
+
+    var opt = {
+        workerPath: chrome.extension.getURL("tesseract/worker.min.js"),
+        // langPath: chrome.extension.getURL("tesseract/lang/"),
+        corePath: chrome.extension.getURL("tesseract/tesseract-core.wasm.js"),
+        logger: (m) => console.log(m),
+        // cachemethod: "none",
+    };
+
     for (let i = 0; i < 12; i++) {
         workerCreationJobs.push(
             (async () => {
-                var recogWorker = Tesseract.createWorker({
-                    //  logger: (m) => console.log(m),
-                });
-
+                var recogWorker = Tesseract.createWorker(opt);
+                console.log(i, "loading");
                 await recogWorker.load();
+                console.log(i, "loading lang");
                 await recogWorker.loadLanguage("nld");
+                console.log(i, "initializing");
                 await recogWorker.initialize("nld");
                 scheduler.addWorker(recogWorker);
+                console.log(i, "done");
             })()
         );
     }
@@ -72,10 +82,7 @@ async function createRecognitionScheduler() {
 }
 
 var globalProgressInfo = {
-    progress: 0.0,
-    status: "",
-    pagesDone: 0,
-    busy: false
+    busy: false,
 };
 
 var jobs = [];
@@ -83,16 +90,30 @@ var recogScheduler;
 async function createPDFWithTextRecognition(startPage, endPage, includeHidden = true) {
     console.log("Creating Tesseract workers/scheduler...");
     globalProgressInfo = {
+        busy: true,
         progress: 0.0,
         status: "Enabling Tesseract...",
-        pagesDone: 0,
-        busy: true
     };
 
     if (!recogScheduler) recogScheduler = await createRecognitionScheduler();
 
     console.log("Starting recognition...");
-    globalProgressInfo.status = "Recognizing..."
+    globalProgressInfo.status = "Recognizing...";
+
+    var pagesDone = 0;
+    function recognizeBase64(base64) {
+        return recogScheduler
+            .addJob("recognize", base64)
+            .then((recog) => {
+                globalProgressInfo.progress = ++pagesDone / (endPage - startPage + 1);
+                globalProgressInfo.status = `Recognizing... (${pagesDone}/${endPage - startPage + 1} pages)`;
+                //console.log("Did page", p, globalProgressInfo.pagesDone, "done", globalProgressInfo.progress);
+                return { base64, recog };
+            })
+            .catch((err) => {
+                console.warn("Could not recognize base64 image, skipped:", err);
+            });
+    }
 
     for (let p = startPage; p <= endPage; p += 2) {
         selectPage(p);
@@ -101,35 +122,8 @@ async function createPDFWithTextRecognition(startPage, endPage, includeHidden = 
         const leftBase64 = await urlsToBase64Downscale(getLeftPageUrls(includeHidden));
         const rightBase64 = await urlsToBase64Downscale(getRightPageUrls(includeHidden));
 
-        if (leftBase64) {
-            jobs.push(
-                recogScheduler
-                    .addJob("recognize", leftBase64)
-                    .then((recog) => {
-                        globalProgressInfo.progress = ++globalProgressInfo.pagesDone / (endPage - startPage);
-                        //console.log("Did left page", p, globalProgressInfo.pagesDone, "done", globalProgressInfo.progress);
-                        return { base64: leftBase64, recog };
-                    })
-                    .catch((err) => {
-                        console.warn("Could not recognize left image, skipped:", err);
-                    })
-            );
-        }
-
-        if (rightBase64) {
-            jobs.push(
-                recogScheduler
-                    .addJob("recognize", rightBase64)
-                    .then((recog) => {
-                        globalProgressInfo.progress = ++globalProgressInfo.pagesDone / (endPage - startPage);
-                        //console.log("Did right page", p, globalProgressInfo.pagesDone, "done", globalProgressInfo.progress);
-                        return { base64: rightBase64, recog };
-                    })
-                    .catch((err) => {
-                        console.warn("Could not recognize right image, skipped:", err);
-                    })
-            );
-        }
+        if (leftBase64) jobs.push(recognizeBase64(leftBase64));
+        if (rightBase64) jobs.push(recognizeBase64(rightBase64));
     }
 
     const results = await Promise.all(jobs);
@@ -139,10 +133,7 @@ async function createPDFWithTextRecognition(startPage, endPage, includeHidden = 
 
     globalProgressInfo = {
         busy: false,
-        progress: 1,
-        status: "Ready",
-        pagesDone: 0
-    }
+    };
 }
 
 async function savePdf(doc) {
@@ -153,46 +144,47 @@ async function savePdf(doc) {
     doc.save(document.title + ".pdf");
 }
 
-var doc;
 async function createPDFFromRecognitionJob(results) {
     console.log("Creating pdf...");
     globalProgressInfo = {
-        pagesDone: 0,
+        busy: true,
         status: "Generating PDF...",
         progress: 0.0,
-        busy: true
-    }
+    };
 
-    doc = new jsPDF("p", "pt", "a4", true);
+    var doc = new jsPDF("p", "pt", "a4", true);
     doc.setTextColor("#000000");
     doc.setFont("courier");
     var pw = doc.internal.pageSize.getWidth(),
         ph = doc.internal.pageSize.getHeight();
 
-    for (let j = 0; j < results.length; j++) {
-        if (!results[j]) continue;
-        const { recog, base64 } = results[j];
+    await new Promise(() => {
+        for (let j = 0; j < results.length; j++) {
+            if (!results[j]) continue;
+            const { recog, base64 } = results[j];
 
-        try {
-            const imgProps = doc.getImageProperties(base64);
-            var lines = recog.data.words;
-            for (let i = 0; i < lines.length; i++) {
-                var l = lines[i];
-                var fs = ((l.bbox.y1 - l.bbox.y0) / imgProps.height) * ph;
-                doc.setFontSize(fs);
-                doc.text(l.text, (l.bbox.x0 / imgProps.width) * pw, (l.bbox.y1 / imgProps.height) * ph, {
-                    charSpace: Math.max(0, (((l.bbox.x1 - l.bbox.x0) / imgProps.width) * pw) / l.text.length - fs),
-                });
+            try {
+                const imgProps = doc.getImageProperties(base64);
+                var lines = recog.data.words;
+                for (let i = 0; i < lines.length; i++) {
+                    var l = lines[i];
+                    var fs = ((l.bbox.y1 - l.bbox.y0) / imgProps.height) * ph;
+                    doc.setFontSize(fs);
+                    doc.text(l.text, (l.bbox.x0 / imgProps.width) * pw, (l.bbox.y1 / imgProps.height) * ph, {
+                        charSpace: Math.max(0, (((l.bbox.x1 - l.bbox.x0) / imgProps.width) * pw) / l.text.length - fs),
+                    });
+                }
+                doc.addImage(base64, "PNG", 0, 0, pw, ph, undefined, "FAST");
+            } catch (ex) {
+                console.warn("Could not render page", j + 1, ex);
             }
-            doc.addImage(base64, "PNG", 0, 0, pw, ph, undefined, "FAST");
-        } catch (ex) {
-            console.warn("Could not render page", j + 1, ex);
+
+            doc.addPage();
+
+            globalProgressInfo.status = `Generating PDF... (${j + 1}/${results.length} pages)`;
+            globalProgressInfo.progress = (j + 1) / results.length;
         }
-        
-        doc.addPage();
-        globalProgressInfo.pagesDone++;
-        globalProgressInfo.progress = (j + 1) / results.length;
-    }
+    });
 
     return doc;
 }
@@ -208,13 +200,12 @@ async function addPDFWaterMark(doc) {
 async function createNormalPDF(startPage, endPage, includeHidden = true) {
     console.log("Creating pdf...");
     globalProgressInfo = {
-        pagesDone: 0,
         status: "Generating PDF...",
         progress: 0.0,
-        busy: true
-    }
+        busy: true,
+    };
 
-    doc = new jsPDF("p", "pt", "a4", true);
+    var doc = new jsPDF("p", "pt", "a4", true);
     var pw = doc.internal.pageSize.getWidth(),
         ph = doc.internal.pageSize.getHeight();
 
@@ -243,7 +234,7 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
             }
         }
 
-        globalProgressInfo.pagesDone += 2;
+        globalProgressInfo.status = `Generating PDF... (${p - startPage + 1}/${endPage - startPage} pages)`;
         globalProgressInfo.progress = (p - startPage + 1) / (endPage - startPage);
     }
 
@@ -251,10 +242,7 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
 
     globalProgressInfo = {
         busy: false,
-        progress: 1,
-        status: "Ready",
-        pagesDone: 0
-    }
+    };
 }
 
 /* These should be altered when a new non-standard PDF viewer is registered */

@@ -37,7 +37,6 @@ function pollProgress() {
         setProgress(res);
         setTimeout(pollProgress, 200);
     });
-
 }
 
 function setWarning(message) {
@@ -78,8 +77,7 @@ function sendMessage(message) {
 async function doShowHiddenLayer(ev) {
     hiddenLayerShown = !hiddenLayerShown;
     const res = await sendMessage({ type: "setHiddenLayer", value: hiddenLayerShown });
-    if (!res)
-    {
+    if (!res) {
         hiddenLayerShown = false;
         setWarning("This page does not have a hidden layer.");
     }
@@ -87,18 +85,16 @@ async function doShowHiddenLayer(ev) {
 }
 
 function setProgress(globalProgressInfo) {
-
     document.querySelector("#progress-section").style.display = globalProgressInfo.busy ? "block" : "none";
     document.querySelectorAll(".control").forEach((el) => {
         el.disabled = globalProgressInfo.busy;
     });
 
-    if (!globalProgressInfo.busy) 
-        return;
+    if (!globalProgressInfo.busy) return;
 
     var statusText = document.querySelector("#convert-status");
     statusText.style.display = globalProgressInfo.busy ? "block" : "none";
-    statusText.innerText = `${globalProgressInfo.status} (${globalProgressInfo.pagesDone} pages)`;
+    statusText.innerText = globalProgressInfo.status;
 
     var progress = document.querySelector("#convert-progress");
     progress.style.display = globalProgressInfo.busy ? "block" : "none";
