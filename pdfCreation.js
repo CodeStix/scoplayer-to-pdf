@@ -58,7 +58,7 @@ async function createRecognitionScheduler() {
         workerPath: chrome.extension.getURL("tesseract/worker.min.js"),
         // langPath: chrome.extension.getURL("tesseract/lang/"),
         corePath: chrome.extension.getURL("tesseract/tesseract-core.wasm.js"),
-        logger: (m) => console.log(m),
+        // logger: (m) => console.log(m),
         // cachemethod: "none",
     };
 
@@ -158,7 +158,7 @@ async function createPDFFromRecognitionJob(results) {
     var pw = doc.internal.pageSize.getWidth(),
         ph = doc.internal.pageSize.getHeight();
 
-    await new Promise(() => {
+    await new Promise((resolve) => {
         for (let j = 0; j < results.length; j++) {
             if (!results[j]) continue;
             const { recog, base64 } = results[j];
@@ -184,6 +184,7 @@ async function createPDFFromRecognitionJob(results) {
             globalProgressInfo.status = `Generating PDF... (${j + 1}/${results.length} pages)`;
             globalProgressInfo.progress = (j + 1) / results.length;
         }
+        resolve();
     });
 
     return doc;
@@ -192,6 +193,7 @@ async function createPDFFromRecognitionJob(results) {
 async function addPDFWaterMark(doc) {
     doc.setTextColor("#888888");
     doc.setFont("courier");
+    doc.setFontSize(12);
     var base64 = await urlToBase64(chrome.extension.getURL("images/icon256.png"));
     doc.addImage(base64, "PNG", 50, 50, 80, 80, undefined, "FAST");
     doc.text(150, 50, "Created with SCOPlayer To PDF chrome extension.\nBy Stijn Rogiest");
@@ -291,6 +293,7 @@ function setHiddenLayer(shown) {
 
 /* Init */
 
+var lastSettings = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!("scoPlayer" in message)) return;
     message = message.scoPlayer;
@@ -303,6 +306,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         supported: true,
                         pageCount: getPageCount(),
                         globalProgressInfo,
+                        lastSettings,
                     },
                 });
             } else {
@@ -322,6 +326,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case "createPDF":
             var func = message.recognizeText ? createPDFWithTextRecognition : createNormalPDF;
             func(message.startPage, message.endPage, message.includeHidden);
+            lastSettings = {
+                recognizeText: message.recognizeText,
+                startPage: message.startPage,
+                endPage: message.endPage,
+                includeHidden: message.includeHidden,
+            };
             sendResponse({ scoPlayer: true });
             return true;
     }

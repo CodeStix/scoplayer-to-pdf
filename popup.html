@@ -1,133 +1,163 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<style>
-			#icon {
-				float: left;
-				margin-right: 0.6em;
-			}
-			body {
-				background-color: #282828;
-				width: 300px;
-				margin: 1em;
-				color: white;
-				box-sizing: content-box;
-			}
-			small {
-				font-size: 70%;
-				opacity: 0.5;
-			}
-			.btn {
-				background-color: #3399BB;
-				border: 1px solid #3399BB;
-				padding: 0.5em 0.6em;
-				text-align: center;
-				border-radius: 0.4em;
-				color: white;
-				font-weight: bold;
-			}
-			.btn:disabled {
-				opacity: 0.5;
-			}
-			#warning-unsupported {
-				font-weight: bold;
-				border: 1px solid red;
-				background-color: #bb2828;
-				border-radius: 1em;
-				margin: 1em 0;
-				padding: 0.9em;
-			}
+    <head>
+        <style>
+            #icon {
+                float: left;
+                margin-right: 0.6em;
+            }
+            body {
+                background-color: #282828;
+                width: 300px;
+                margin: 1em;
+                color: white;
+                box-sizing: content-box;
+            }
+            small {
+                font-size: 70%;
+                opacity: 0.5;
+            }
+            .btn {
+                background-color: #3399bb;
+                border: 1px solid #3399bb;
+                padding: 0.5em 0.6em;
+                text-align: center;
+                border-radius: 0.4em;
+                color: white;
+                font-weight: bold;
+            }
+            .btn:disabled {
+                opacity: 0.5;
+            }
+            #warning-unsupported {
+                font-weight: bold;
+                border: 1px solid red;
+                background-color: #bb2828;
+                border-radius: 1em;
+                margin: 1em 0;
+                padding: 0.9em;
+            }
 
-			#convert-progress {
-				width: 100%;
-			}
-			.control-description {
-				opacity: 0.8;
-				font-size: 0.85em;
-				margin-top: 0.3em;
-			}
+            #convert-progress {
+                width: 100%;
+            }
+            .control-description {
+                opacity: 0.8;
+                font-size: 0.85em;
+                margin-top: 0.3em;
+            }
 
-			.collapsable {
-				overflow: hidden;
-				opacity: 1;
-				transition: 300ms;
-				max-height: 500px;
-			}
+            .collapsable {
+                overflow: hidden;
+                opacity: 1;
+                transition: 300ms;
+                max-height: 500px;
+            }
 
-			.collapsable[collapsed] {
-				opacity: 0;
-				transition: 300ms;
-				max-height: 0;
-			}
+            .collapsable[collapsed] {
+                opacity: 0;
+                transition: 300ms;
+                max-height: 0;
+            }
 
-			.mb {
-				margin-bottom: 0.5em;
-			}
+            .mb {
+                margin-bottom: 0.5em;
+            }
 
-			.info-section {
-				background-color: #222222;
-				border: 1px solid #303030;
-				border-radius: 1em;
-				font-family: monospace;
-				margin: 0.5em 0em;
-				font-size: 1.1em;
-				padding: 0.5em 0.7em;
-			}
+            .info-section {
+                background-color: #222222;
+                border: 1px solid #303030;
+                border-radius: 1em;
+                font-family: monospace;
+                margin: 0.5em 0em;
+                font-size: 1.1em;
+                padding: 0.5em 0.7em;
+            }
 
-			.info-section > h3 {
-				margin: 0em;
-			}
+            h3 {
+                margin: 0.3em 0em;
+            }
 
-			#advanced-settings-toggle {
-				font-size: 0.9em;
-				background-color: #282828;
+            .info-section > h3 {
+                margin: 0em;
+            }
+
+            #advanced-settings-toggle {
+                font-size: 0.9em;
+                background-color: #282828;
+            }
+
+            #hidden-layer-note {
+                text-decoration: underline;
+                font-size: 0.8em;
+            }
+
+            #about-section {
+                color: #4a4a4a;
+                font-size: 0.9em;
+                margin-top: 1rem;
 			}
-		</style>
-		<script src="popup.js"></script>
-	</head>
-	<body>
-		<img id="icon" src="images/icon32.png"/>
-		<h1>SCOPlayer To PDF
-			<small>v0.0.1</small>
-		</h1>
-		<div id="warning-unsupported" style="display:none">
-			This website is not supported.
+			#about-section > a, #about-section > a:visited {
+				opacity: 0.3;
+				color: aqua;
+			}
+        </style>
+        <script src="popup.js"></script>
+    </head>
+    <body>
+        <img id="icon" src="images/icon32.png" />
+        <h1>
+            SCOPlayer To PDF
+            <small>v0.0.1</small>
+        </h1>
+        <div id="warning-unsupported" style="display: none;">
+            This website is not supported.
+        </div>
+        <div id="content" style="display: none;">
+            <h2>Current page</h2>
+            <h3>Hidden layer</h3>
+            <button class="control btn" id="show-hidden-button">Show</button>
+            <button class="control btn" id="hide-hidden-button">Hide</button>
+            <p id="hidden-layer-note"></p>
+            <p class="control-description">
+                Hidden layers sometimes contain solutions. Some pages have a transparent hidden layer, when this is the case, there will be no visual change.
+            </p>
+            <h2>Whole document</h2>
+            <h3>Convert PDF</h3>
+            <div class="mb info-section" id="progress-section">
+                <h3>Progress</h3>
+                <p id="convert-status">Status here</p>
+                <progress class="mb" id="convert-progress" max="100"></progress>
+            </div>
+            <div class="mb">
+                <label for="min-page-input">Page range</label>
+                <input class="control" type="number" id="min-page-input" name="Min page" min="1" max="1" />
+                -
+                <input class="control" type="number" id="max-page-input" name="Max page" min="1" max="1" />
+            </div>
+            <button class="control btn mb" id="advanced-settings-toggle">Advanced settings</button>
+            <div class="collapsable mb" id="advanced-settings-collapse" collapsed>
+                <div class="mb">
+                    <input class="control" type="checkbox" id="hidden-layer-check" checked />
+                    <label for="hidden-layer-check">Include hidden layer</label>
+                    <p class="control-description">This settings looks if any hidden layer is active in the document and includes it in the generated PDF.</p>
+                </div>
+                <div class="mb">
+                    <input class="control" type="checkbox" id="recognize-text-check" />
+                    <label for="recognize-text-check">Recognize text (experimental!)</label>
+                    <p class="control-description">
+                        Enable the Tesseract library to recognize text in the pages (each page is an image), this is handy if you wish to use Ctrl+F to search
+                        for terms.
+                        <strong>Warning: this takes a long time (~15 minutes for 150 pages) and puts a lot of stress on your pc.</strong>
+                    </p>
+                </div>
+            </div>
+            <button class="control btn" id="convert-button">Start</button>
 		</div>
-		<div id="content" style="display:none">
-			<h2>Current page</h2>
-			<button class="control btn" id="hidden-button">Show hidden layer</button>
-			<p class="control-description">
-				Some pages have a transparent hidden layer, when this is the case, there will be no visual change.
-			</p>
-			<h2>Whole document</h2>
-			<div class="mb info-section" id="progress-section">
-				<h3>Progress</h3>
-				<p id="convert-status">Status here</p>
-				<progress class="mb" id="convert-progress" max="100"></progress>
-			</div>
-			<div class="mb">
-				<label for="min-page-input">Page range</label>
-				<input class="control" type="number" id="min-page-input" name="Min page" min="1" max="1">
-				-
-				<input class="control" type="number" id="max-page-input" name="Max page" min="1" max="1">
-			</div>
-			<button class="control btn mb" id="advanced-settings-toggle">Advanced settings</button>
-			<div class="collapsable mb" id="advanced-settings-collapse" collapsed>
-				<div class="mb">
-					<input class="control" type="checkbox" id="hidden-layer-check" checked/>
-					<label for="hidden-layer-check">Include hidden layer</label>
-					<p class="control-description">This settings looks if any hidden layer is active in the document and includes it in the generated PDF.</p>
-				</div>
-				<div class="mb">
-					<input class="control" type="checkbox" id="recognize-text-check"/>
-					<label for="recognize-text-check">Recognize text (experimental!)</label>
-					<p class="control-description">
-						Enable the Tesseract library to recognize text in the pages (each page is an image), this is handy if you wish to use Ctrl+F to search for terms.
-						<strong>Warning: this takes a long time (~15 minutes for 150 pages) and puts a lot of stress on your pc.</strong>
-					</p>
-				</div>
-			</div>
-			<button class="control btn" id="convert-button">Convert PDF</button>
+		<div id="about-section">
+			<a id="github-link" href="#">GitHub</a> 	
+			&#8226
+			by Stijn Rogiest
 		</div>
-	</body>
+    </body>
 </html>

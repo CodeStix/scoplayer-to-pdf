@@ -1,13 +1,13 @@
-var hiddenLayerShown = false;
-
 window.onload = function () {
-    document.querySelector("#hidden-button").addEventListener("click", doShowHiddenLayer);
+    document.querySelector("#hide-hidden-button").addEventListener("click", () => doShowHiddenLayer(false));
+    document.querySelector("#show-hidden-button").addEventListener("click", () => doShowHiddenLayer(true));
     document.querySelector("#convert-button").addEventListener("click", doConvertPDF);
     document.querySelector("#advanced-settings-toggle").addEventListener("click", () => {
         var p = document.querySelector("#advanced-settings-collapse");
         if (!p.hasAttribute("collapsed")) p.setAttribute("collapsed", true);
         else p.removeAttribute("collapsed");
     });
+    document.querySelector("#github-link").addEventListener("click", () => chrome.tabs.create({ url: "https://github.com/CodeStix/scoplayer-to-pdf" }));
 
     sendMessage({ type: "info" }).then((res) => {
         const content = document.querySelector("#content");
@@ -23,6 +23,7 @@ window.onload = function () {
             maxPage.value = res.pageCount;
 
             setProgress(res.globalProgressInfo);
+            if (res.lastSettings) setSettings(res.lastSettings);
         } else {
             setWarning("This website is not supported.");
             content.style.display = "none";
@@ -74,14 +75,22 @@ function sendMessage(message) {
     });
 }
 
-async function doShowHiddenLayer(ev) {
-    hiddenLayerShown = !hiddenLayerShown;
-    const res = await sendMessage({ type: "setHiddenLayer", value: hiddenLayerShown });
+async function doShowHiddenLayer(show) {
+    const res = await sendMessage({ type: "setHiddenLayer", value: show });
     if (!res) {
-        hiddenLayerShown = false;
         setWarning("This page does not have a hidden layer.");
+        document.querySelector("#hidden-layer-note").innerText = "";
+    } else {
+        document.querySelector("#hidden-layer-note").innerText = `The hidden layer is now ${show ? "shown" : "hidden"}.`;
     }
-    ev.target.innerText = !hiddenLayerShown ? "Show hidden layer" : "Hide layer";
+}
+
+function setSettings(settings) {
+    const { startPage, endPage, recognizeText, includeHidden } = settings;
+    document.querySelector("#min-page-input").value = startPage;
+    document.querySelector("#max-page-input").value = endPage;
+    document.querySelector("#recognize-text-check").checked = recognizeText;
+    document.querySelector("#hidden-layer-check").checked = includeHidden;
 }
 
 function setProgress(globalProgressInfo) {
