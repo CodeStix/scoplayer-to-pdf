@@ -2,7 +2,7 @@
 
 # scoplayer-to-pdf
 
-My school uses a non-standard PDF viewer that does not allow pdf downloading. The viewer they use (SmartSCOPlayer) also contains leaked workbook solutions. This **chrome extension** is made to convert these documents to PDF and also to show solutions.
+Some online book platfoms (mostly schools) use a non-standard PDF viewer that does not allow pdf downloading. The viewer they use (SmartSCOPlayer, still a mystery) also contains leaked workbook solutions. This **chrome extension** is made to convert these documents to PDF and also to show leaked solutions.
 Every page is downloaded as an image when viewing the document, to be able to search through the generated PDF, this tool also includes an experimental image to text recognizer (tesseract.js) which allows you to <kbd>Ctrl</kbd>+<kbd>F</kbd> after convertion.
 
 ## Installation
