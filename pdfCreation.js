@@ -28,26 +28,31 @@ function urlToImage(url) {
 // Slower url to base64 method, but can layer urls on top of each other and can downscale
 var downscaleCanvas;
 async function urlsToBase64Downscale(urls, downscaleFactor = 1) {
-    if (!urls || urls.length === 0) return null;
-    if (urls.length === 1 && downscaleFactor == 1) return await urlToBase64(urls[0]); // Use faster method if only 1 url is specified and if no downscaling is required
-    if (!downscaleCanvas) downscaleCanvas = document.createElement("canvas");
+    try {
+        if (!urls || urls.length === 0) return null;
+        if (urls.length === 1 && downscaleFactor == 1) return await urlToBase64(urls[0]); // Use faster method if only 1 url is specified and if no downscaling is required
+        if (!downscaleCanvas) downscaleCanvas = document.createElement("canvas");
 
-    var ctx;
-    for (let i = 0; i < urls.length; i++) {
-        var url = urls[i];
-        if (!url) continue;
-        var img = await urlToImage(url);
-        if (i == 0) {
-            downscaleCanvas.width = img.width / downscaleFactor;
-            downscaleCanvas.height = img.height / downscaleFactor;
-            ctx = downscaleCanvas.getContext("2d");
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "medium"; //"low" || "medium" || "high"
+        var ctx;
+        for (let i = 0; i < urls.length; i++) {
+            var url = urls[i];
+            if (!url) continue;
+            var img = await urlToImage(url);
+            if (i == 0) {
+                downscaleCanvas.width = img.width / downscaleFactor;
+                downscaleCanvas.height = img.height / downscaleFactor;
+                ctx = downscaleCanvas.getContext("2d");
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "medium"; //"low" || "medium" || "high"
+            }
+            ctx.drawImage(img, 0, 0, downscaleCanvas.width, downscaleCanvas.height);
         }
-        ctx.drawImage(img, 0, 0, downscaleCanvas.width, downscaleCanvas.height);
-    }
 
-    return downscaleCanvas.toDataURL();
+        return downscaleCanvas.toDataURL();
+    } catch (ex) {
+        console.warn("Cannot downscale", urls);
+        return null;
+    }
 }
 
 async function createRecognitionScheduler() {
