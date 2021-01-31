@@ -22,5 +22,6 @@ Every page is downloaded as an image when viewing the document, to be able to se
 Currently, only **SmartSCOPlayer** is supported:
 
 ![SmartSCOPlayer looks like this](https://github.com/CodeStix/scoplayer-to-pdf/blob/master/images/example.png)
+![SmartSCOPlayer looks like this](https://github.com/CodeStix/scoplayer-to-pdf/blob/master/images/example2.png)
 
 You can request support for another viewer by opening an issue or pull request.
