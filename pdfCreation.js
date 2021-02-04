@@ -204,7 +204,7 @@ async function addPDFWaterMark(doc) {
     doc.setFontSize(12);
     var base64 = await urlToBase64(chrome.extension.getURL("images/icon256.png"));
     doc.addImage(base64, "PNG", 50, 50, 80, 80, undefined, "FAST");
-    doc.text(150, 50, "Created with SCOPlayer To PDF chrome extension.\nBy Stijn Rogiest");
+    doc.text(150, 50, "Created with SCOPlayer To PDF chrome extension.\nBy Stijn Rogiest (github.com/CodeStix)");
 }
 
 async function createNormalPDF(startPage, endPage, includeHidden = true) {
