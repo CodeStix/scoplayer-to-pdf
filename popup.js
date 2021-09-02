@@ -7,7 +7,9 @@ window.onload = function () {
         if (!p.hasAttribute("collapsed")) p.setAttribute("collapsed", true);
         else p.removeAttribute("collapsed");
     });
-    document.querySelector("#github-link").addEventListener("click", () => chrome.tabs.create({ url: "https://github.com/CodeStix/scoplayer-to-pdf" }));
+    document
+        .querySelector("#github-link")
+        .addEventListener("click", () => chrome.tabs.create({ url: "https://github.com/CodeStix/scoplayer-to-pdf" }));
 
     sendMessage({ type: "info" }).then((res) => {
         const content = document.querySelector("#content");
@@ -53,20 +55,21 @@ function sendMessage(message) {
             chrome.tabs.sendMessage(tab, { scoPlayer: message }, (res) => {
                 if (chrome.runtime.lastError || !res) {
                     // The message was not delivered, inject the scripts that will receive the message
-                    chrome.tabs.executeScript(tab, { file: "tesseract.min.js" }, () => {
-                        chrome.tabs.executeScript(tab, { file: "jspdf.min.js" }, () => {
-                            chrome.tabs.executeScript(tab, { file: "pdfCreation.js" }, () => {
-                                chrome.tabs.sendMessage(tab, { scoPlayer: message }, (res) => {
-                                    if (chrome.runtime.lastError || !res) {
-                                        console.warn("No answer after injecting, this should not happen.");
-                                        reject();
-                                    } else {
-                                        resolve(res.scoPlayer);
-                                    }
-                                });
-                            });
-                        });
+                    // chrome.tabs.executeScript(tab, { file: "tesseract.min.js" }, () => {
+                    // chrome.tabs.executeScript(tab, { file: "jspdf.min.js" }, () => {
+                    // chrome.tabs.executeScript(tab, { file: "pdfCreation.js" }, () => {
+                    chrome.tabs.sendMessage(tab, { scoPlayer: message }, (res) => {
+                        if (chrome.runtime.lastError || !res) {
+                            console.warn("No answer after injecting, this should not happen.");
+                            reject();
+                        } else {
+                            console.warn("supported response", JSON.stringify(res.scoPlayer));
+                            resolve(res.scoPlayer);
+                        }
                     });
+                    // });
+                    // });
+                    // });
                 } else {
                     resolve(res.scoPlayer);
                 }

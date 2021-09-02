@@ -21,5 +21,18 @@
     "web_accessible_resources": [
         "images/*",
         "tesseract/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "pdfCreation.js",
+                "tesseract.min.js",
+                "jspdf.min.js"
+            ],
+            "all_frames": true
+        }
     ]
 }

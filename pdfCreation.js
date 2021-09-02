@@ -259,6 +259,7 @@ async function createNormalPDF(startPage, endPage, includeHidden = true) {
 
 function getDocument() {
     return document.getElementById("viewFrame")?.contentWindow.document;
+    // document.getElementById("SilverpointPlayer")?.contentWindow.document.getElementById("viewFrame").contentWindow.document
 }
 
 function isSupported() {
@@ -318,20 +319,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     },
                 });
             } else {
-                sendResponse({
-                    scoPlayer: {
-                        supported: false,
-                    },
-                });
+                // sendResponse({
+                //     scoPlayer: {
+                //         supported: false,
+                //     },
+                // });
             }
             return true;
         case "setHiddenLayer":
+            if (!isSupported()) return true;
             sendResponse({ scoPlayer: setHiddenLayer(message.value) });
             return true;
         case "progress":
+            if (!isSupported()) return true;
             sendResponse({ scoPlayer: globalProgressInfo });
             return true;
         case "createPDF":
+            if (!isSupported()) return true;
             var func = message.recognizeText ? createPDFWithTextRecognition : createNormalPDF;
             func(message.startPage, message.endPage, message.includeHidden);
             lastSettings = {
